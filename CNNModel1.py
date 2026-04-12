@@ -40,7 +40,8 @@ class ConvNet(nn.Module):
         out = self.fc2(out)
         return out
 
-#--------------XDataset-------------
+
+# --------------XDataset-------------
 class XDataset(Dataset):
     def __init__(self, files, transform=None):
         self.files = files
@@ -58,6 +59,8 @@ class XDataset(Dataset):
         return img, label
 
     # MNIST WRAPPER
+
+
 class MNISTWrapper(Dataset):
     def __init__(self, mnist_tf_dataset, transform):
         self.data = mnist_tf_dataset.data  # uint8 tensor
@@ -76,6 +79,7 @@ class MNISTWrapper(Dataset):
             img_t = transforms.ToTensor()(pil)
         label = int(self.targets[idx].item())
         return img_t, label
+
 
 def main():
     import numpy as np
@@ -130,7 +134,6 @@ def main():
     train_dataset_full = datasets.MNIST(root=DATA_PATH, train=True, transform=mnist_trans, download=True)
     test_dataset_full = datasets.MNIST(root=DATA_PATH, train=False, transform=mnist_trans)
 
-
     # MNIST с фильтрацией 0–4
     def filter_mnist(dataset):
         mask = (dataset.targets < 5)  # оставляем только 0–4
@@ -138,12 +141,9 @@ def main():
         dataset.targets = dataset.targets[mask]
         return dataset
 
-
     # применение фильтрации
     mnist_train_dataset = filter_mnist(train_dataset_full)
     mnist_test_dataset = filter_mnist(test_dataset_full)
-
-
 
     mnist_train_ds = MNISTWrapper(mnist_train_dataset, transform=mnist_trans)
     mnist_test_ds = MNISTWrapper(mnist_test_dataset, transform=mnist_trans)
@@ -159,19 +159,15 @@ def main():
 
     test_x_files = [os.path.join(r"C:\Users\us3r02\PycharmProjects\CNN_numbers_model\XDataset\X", f)
                     for f in os.listdir(r"C:\Users\us3r02\PycharmProjects\CNN_numbers_model\XDataset\X") if
-                   f.lower().endswith((".png", ".jpg", ".jpeg"))]
-    #x_train_files, x_test_files = train_test_split(all_x_files, train_size=0.99, random_state=seed, shuffle=True)
-
-
-
+                    f.lower().endswith((".png", ".jpg", ".jpeg"))]
+    # x_train_files, x_test_files = train_test_split(all_x_files, train_size=0.99, random_state=seed, shuffle=True)
 
     x_train_dataset = XDataset(x_train_files, transform=x_train_transform)
-    x_test_dataset = XDataset( test_x_files , transform=x_test_transform)  # можно разделить, но пока одно и то же
+    x_test_dataset = XDataset(test_x_files, transform=x_test_transform)  # можно разделить, но пока одно и то же
 
     # Объединяем датасеты
     train_dataset_final = ConcatDataset([mnist_train_ds, x_train_dataset])
     test_dataset_final = ConcatDataset([mnist_test_ds, x_test_dataset])
-
 
     # ------------------
     # build list of labels for train_ds to compute sample weights
@@ -181,7 +177,6 @@ def main():
             _, lbl = dataset[i]
             labels.append(int(lbl))
         return labels
-
 
     train_labels = get_labels_from_concat(train_dataset_final)
     counter = Counter(train_labels)
@@ -199,9 +194,9 @@ def main():
 
     train_loader = DataLoader(dataset=train_dataset_final,
                               batch_size=batch_size,
-                              sampler = sampler,
+                              sampler=sampler,
                               num_workers=2,
-                              shuffle= False,
+                              shuffle=False,
                               pin_memory=True,
                               )
     test_loader = DataLoader(dataset=test_dataset_final,
@@ -210,10 +205,6 @@ def main():
                              num_workers=2,
                              pin_memory=True
                              )
-
-
-
-
 
     model = ConvNet().to(device)
     criterion = nn.CrossEntropyLoss()
@@ -254,11 +245,11 @@ def main():
     patience = 8
     patience_counter = 0
 
-    for epoch in range(1, num_epochs+1):
+    for epoch in range(1, num_epochs + 1):
         model.train()
         running_loss = 0.0
         for imgs, labels in train_loader:
-            #print("Batch", Counter(labels.tolist()))
+            # print("Batch", Counter(labels.tolist()))
             imgs, labels = imgs.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(imgs)
@@ -284,7 +275,7 @@ def main():
                 all_labels.append(labels.cpu().numpy())
 
         val_acc = correct / total
-        print(f"Epoch {epoch}: train_loss={running_loss/len(train_dataset_final):.4f}, val_acc={val_acc:.4f}")
+        print(f"Epoch {epoch}: train_loss={running_loss / len(train_dataset_final):.4f}, val_acc={val_acc:.4f}")
 
         # scheduler step
         scheduler.step(val_acc)
@@ -296,7 +287,8 @@ def main():
         from sklearn.metrics import confusion_matrix, classification_report
         cm = confusion_matrix(y_true, y_pred, labels=list(range(num_classes)))
         print("Confusion matrix:\n", cm)
-        print(classification_report(y_true, y_pred, labels=list(range(num_classes)), target_names=[str(i) for i in range(num_classes)]))
+        print(classification_report(y_true, y_pred, labels=list(range(num_classes)),
+                                    target_names=[str(i) for i in range(num_classes)]))
 
         # save best
         if val_acc > best_val_acc:
@@ -312,11 +304,13 @@ def main():
 
     print("Training finished. Best val_acc=", best_val_acc)
 
-    #-----------------Сохранение-----------------------------
+    # -----------------Сохранение-----------------------------
     os.makedirs(MODEL_STORE_PATH, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(MODEL_STORE_PATH, "conv_net_model_X.ckpt"))
 
+
 if __name__ == "__main__":
     import multiprocessing
+
     multiprocessing.freeze_support()
     main()
